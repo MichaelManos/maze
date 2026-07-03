@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import time
 from tkinter import BOTH, Canvas, Tk
 
@@ -74,6 +75,8 @@ class Cell:
         self.__y2 = -1.0
         self.__win = window
 
+        self.visited = False
+
     def draw(self, top_left: Point, bottom_right: Point) -> None:
         self.__x1 = top_left.x
         self.__x2 = bottom_right.x
@@ -131,6 +134,7 @@ class Maze:
         cell_size_x: float,
         cell_size_y: float,
         win: Window | None = None,
+        seed: int | None = None,
     ) -> None:
         self.x1 = x1
         self.y1 = y1
@@ -140,8 +144,14 @@ class Maze:
         self.cell_size_y = cell_size_y
         self.win = win
 
+        if seed is not None:
+            seed = random.seed(seed)
+
         self.__cells = []
         self.__create_cells()
+        self.__break_entrance_and_exit()
+        self.__break_walls_r(0, 0)
+        self.__reset_cells_visited()
 
     def __create_cells(self):
         # Create
@@ -179,19 +189,53 @@ class Maze:
         ].has_bottom_wall = False
         self._draw_cell(self.num_cols - 1, self.num_rows - 1)
 
+    def __break_walls_r(self, i, j) -> None:
+        """i is column number, j is row number (0-indexed)"""
+        self.__cells[i][j].visited = True
+        while True:
+            available_moves = []
+            if i > 0:
+                if self.__cells[i - 1][j].visited == False:
+                    available_moves.append("left")
+            if i < self.num_cols - 1:
+                if self.__cells[i + 1][j].visited == False:
+                    available_moves.append("right")
+            if j > 0:
+                if self.__cells[i][j - 1].visited == False:
+                    available_moves.append("up")
+            if j < self.num_rows - 1:
+                if self.__cells[i][j + 1].visited == False:
+                    available_moves.append("down")
+            if len(available_moves) == 0:
+                self._draw_cell(i, j)
+                return
+            next_move = random.choice(available_moves)
+            if next_move == "left":
+                self.__cells[i][j].has_left_wall = False
+                self.__cells[i - 1][j].has_right_wall = False
+                self.__break_walls_r(i - 1, j)
+            elif next_move == "right":
+                self.__cells[i][j].has_right_wall = False
+                self.__cells[i + 1][j].has_left_wall = False
+                self.__break_walls_r(i + 1, j)
+            elif next_move == "up":
+                self.__cells[i][j].has_top_wall = False
+                self.__cells[i][j - 1].has_bottom_wall = False
+                self.__break_walls_r(i, j - 1)
+            elif next_move == "down":
+                self.__cells[i][j].has_bottom_wall = False
+                self.__cells[i][j + 1].has_top_wall = False
+                self.__break_walls_r(i, j + 1)
+
+    def __reset_cells_visited(self):
+        for row in self.__cells:
+            for cell in row:
+                cell.visited = False
+
 
 def main():
-    win = Window(800, 600)
-    win.draw_line(Line(Point(3, 4), Point(25, 90)), "red")
-    win.draw_line(Line(Point(500, 499), Point(250, 499)), "blue")
-    win.draw_line(Line(Point(100, 100), Point(250, 100)), "green")
-    cell1 = Cell(win, has_bottom_wall=False)
-    cell2 = Cell(win, has_right_wall=False)
-    cell1.draw(Point(10, 10), Point(50, 50))
-    cell2.draw(Point(600, 150), Point(700, 300))
-    cell1.draw_move(cell2, True)
-    maze = Maze(250, 250, 10, 5, 10, 10, win)
-    maze._Maze__break_entrance_and_exit()
+    win = Window(810, 610)
+    maze = Maze(5, 5, 12, 16, 50, 50, win, 99)
     win.wait_for_close()
 
 
