@@ -4,7 +4,7 @@ import random
 import time
 from tkinter import BOTH, Canvas, Tk
 
-ANIMATE_TIME = 0.01
+ANIMATE_TIME = 0.05
 BLANK_COLOR = "#F0F0F0"
 
 
@@ -119,7 +119,7 @@ class Cell:
 
     def draw_move(self, to_cell: Cell, undo: bool = False) -> None:
         line = Line(self.center(), to_cell.center())
-        fill_color = "gray" if undo else "red"
+        fill_color = BLANK_COLOR if undo else "red"
         if self.__win is not None:
             self.__win.draw_line(line, fill_color)
 
@@ -232,10 +232,54 @@ class Maze:
             for cell in row:
                 cell.visited = False
 
+    def solve(self):
+        return self._solve_r(0, 0)
+
+    def _solve_r(self, i, j):
+        self.__animate()
+        current_cell: Cell = self.__cells[i][j]
+        current_cell.visited = True
+        if i == self.num_cols - 1 and j == self.num_rows - 1:
+            return True
+        # left
+        if i > 0 and not current_cell.has_left_wall:
+            candidate_cell = self.__cells[i - 1][j]
+            if not candidate_cell.visited:
+                current_cell.draw_move(candidate_cell)
+                if self._solve_r(i - 1, j):
+                    return True
+                current_cell.draw_move(candidate_cell, undo=True)
+        # right
+        if i < self.num_cols - 1 and not current_cell.has_right_wall:
+            candidate_cell = self.__cells[i + 1][j]
+            if not candidate_cell.visited:
+                current_cell.draw_move(candidate_cell)
+                if self._solve_r(i + 1, j):
+                    return True
+                current_cell.draw_move(candidate_cell, undo=True)
+        # north
+        if j > 0 and not current_cell.has_top_wall:
+            candidate_cell = self.__cells[i][j - 1]
+            if not candidate_cell.visited:
+                current_cell.draw_move(candidate_cell)
+                if self._solve_r(i, j - 1):
+                    return True
+                current_cell.draw_move(candidate_cell, undo=True)
+        # south
+        if j < self.num_rows - 1 and not current_cell.has_bottom_wall:
+            candidate_cell = self.__cells[i][j + 1]
+            if not candidate_cell.visited:
+                current_cell.draw_move(candidate_cell)
+                if self._solve_r(i, j + 1):
+                    return True
+                current_cell.draw_move(candidate_cell, undo=True)
+        return False
+
 
 def main():
     win = Window(810, 610)
-    maze = Maze(5, 5, 12, 16, 50, 50, win, 99)
+    maze = Maze(5, 5, 12, 16, 50, 50, win)
+    maze.solve()
     win.wait_for_close()
 
 
